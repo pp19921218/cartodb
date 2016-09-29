@@ -1,9 +1,9 @@
 require 'active_record'
 
 require_relative '../../helpers/bounding_box_helper'
+require_relative './carto_json_serializer'
 
 class Carto::Map < ActiveRecord::Base
-
   has_many :layers_maps
   has_many :layers, class_name: 'Carto::Layer',
                     order: '"order"',
@@ -27,6 +27,13 @@ class Carto::Map < ActiveRecord::Base
     provider:        'leaflet',
     center:          [30, 0]
   }.freeze
+
+  serialize :embed_options, ::Carto::CartoJsonSerializer
+  validates :embed_options, carto_json_symbolizer: true
+
+  validate :validate_embed_options
+
+  after_initialize :ensure_embed_options
 
   def data_layers
     layers.select(&:carto?)
@@ -123,7 +130,41 @@ class Carto::Map < ActiveRecord::Base
     data_layers.each(&:register_table_dependencies)
   end
 
+  def dashboard_menu=(value)
+    embed_options[:dashboard_menu] = value
+  end
+
+  def dashboard_menu
+    embed_options[:dashboard_menu]
+  end
+
+  def layer_selector=(value)
+    embed_options[:layer_selector] = value
+  end
+
+  def layer_selector
+    embed_options[:layer_selector]
+  end
+
   private
+
+  def ensure_embed_options
+    self.embed_options ||= {
+      dashboard_menu: true,
+      layer_selector: true,
+      legends: legends,
+      scrollwheel: scrollwheel
+    }
+  end
+
+  def validate_embed_options
+    location = "#{Rails.root}/lib/formats/map/embed_options.json"
+    schema = Carto::Definition.instance.load_from_file(location)
+
+    embed_options_wia = embed_options.with_indifferent_access
+    json_errors = JSON::Validator.fully_validate(schema, embed_options_wia)
+    errors.add(:embed_options, json_errors.join(', ')) if json_errors.any?
+  end
 
   def get_the_last_time_tiles_have_changed_to_render_it_in_vizjsons
     table       = user_tables.first
