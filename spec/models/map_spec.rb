@@ -94,7 +94,7 @@ describe Map do
           @map.errors[:embed_options][0].should include('String did not match the following type: boolean')
         end
 
-        it 'requies a dashboard_menu value' do
+        it 'requires a dashboard_menu value' do
           @map.dashboard_menu = nil
 
           @map.valid?.should be_false
@@ -102,7 +102,7 @@ describe Map do
           @map.errors[:embed_options][0].should include('NilClass did not match the following type: boolean')
         end
 
-        it 'requies a layer_selector value' do
+        it 'requires a layer_selector value' do
           @map.layer_selector = nil
 
           @map.valid?.should be_false
@@ -138,6 +138,14 @@ describe Map do
           @map.valid?.should be_false
           @map.errors[:embed_options].should_not be_empty
           @map.errors[:embed_options][0].should include('spam')
+        end
+
+        it 'rejects incomplete embed_options' do
+          @map.embed_options.delete(:dashboard_menu)
+
+          @map.valid?.should be_false
+          @map.errors[:embed_options].should_not be_empty
+          @map.errors[:embed_options][0].should include('dashboard_menu')
         end
       end
     end
